@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Posture Checker</title>
+</head>
+<body>
+
+<h2>Posture AI Test</h2>
+
+<label>Left:</label>
+<input id="left" type="number" step="0.01"><br><br>
+
+<label>Right:</label>
+<input id="right" type="number" step="0.01"><br><br>
+
+<label>Back:</label>
+<input id="back" type="number" step="0.01"><br><br>
+
+<button onclick="sendData()">Predict</button>
+
+<h3 id="result"></h3>
+
+<script>
+function sendData() {
+  const left = parseFloat(document.getElementById("left").value);
+  const right = parseFloat(document.getElementById("right").value);
+  const back = parseFloat(document.getElementById("back").value);
+
+  fetch("http://127.0.0.1:5000/predict", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      left: left,
+      right: right,
+      back: back
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("result").innerText =
+      "Posture: " + data.posture;
+  });
+}
+</script>
+
+</body>
+</html>

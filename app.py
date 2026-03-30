@@ -1,47 +1,58 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import pickle
 import os
 
-# 1. โหลด model (แนะนำให้ใส่ try-except เผื่อหาไฟล์ไม่เจอ)
+app = Flask(__name__)
+CORS(app)
+
+# โหลด model
 try:
     with open("model.pkl", "rb") as f:
         model = pickle.load(f)
-except FileNotFoundError:
-    print("Error: ไม่พบไฟล์ model.pkl กรุณาตรวจสอบพาธไฟล์")
+    print("✅ Model loaded successfully")
+except Exception as e:
+    print("❌ Error loading model:", e)
+    model = None
 
-app = Flask(__name__)
-
+# Home route (เช็คว่า server ทำงาน)
 @app.route("/")
 def home():
     return "Posture AI Backend Running!"
 
-# 2. รวม GET และ POST ไว้ด้วยกัน
-@app.route("/predict", methods=["GET", "POST"])
+# GET สำหรับเปิดใน browser กันงง
+@app.route("/predict", methods=["GET"])
+def predict_get():
+    return "Use POST method with JSON data"
+
+# POST สำหรับ AI จริง
+@app.route("/predict", methods=["POST"])
 def predict():
-    if request.method == "GET":
-        return "Please use POST method with JSON data (left, right, back)"
-    
-    data = request.json
+    if model is None:
+        return jsonify({"error": "Model not loaded"}), 500
+
+    data = request.get_json()
+
     if not data:
-        return jsonify({"error": "No JSON data provided"}), 400
+        return jsonify({"error": "No JSON received"}), 400
 
     left = data.get("left")
     right = data.get("right")
     back = data.get("back")
 
+    # เช็ค input
     if left is None or right is None or back is None:
-        return jsonify({"error": "Missing input fields (left, right, back)"}), 400
+        return jsonify({"error": "Missing data"}), 400
 
-    # 3. Predict และแปลงผลลัพธ์เป็นมาตรฐาน Python (เช่น int หรือ str)
-    prediction = model.predict([[left, right, back]])
-    result = prediction[0]
+    try:
+        prediction = model.predict([[left, right, back]])
+        return jsonify({
+            "posture": prediction[0]
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    return jsonify({
-        "posture": str(result) # แปลงเป็น str หรือ int เพื่อให้ jsonify ทำงานได้ 100%
-    })
-
-# 4. ต้องอยู่ล่างสุดเสมอ
+# สำหรับ Render (สำคัญมาก)
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)

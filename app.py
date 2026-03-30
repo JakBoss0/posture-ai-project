@@ -1,40 +1,47 @@
 from flask import Flask, request, jsonify
 import pickle
+import os
 
-# โหลด model
-with open("model.pkl", "rb") as f:
-    model = pickle.load(f)
+# 1. โหลด model (แนะนำให้ใส่ try-except เผื่อหาไฟล์ไม่เจอ)
+try:
+    with open("model.pkl", "rb") as f:
+        model = pickle.load(f)
+except FileNotFoundError:
+    print("Error: ไม่พบไฟล์ model.pkl กรุณาตรวจสอบพาธไฟล์")
 
 app = Flask(__name__)
 
-# test route
 @app.route("/")
 def home():
     return "Posture AI Backend Running!"
 
-# predict route
-@app.route("/predict", methods=["POST"])
+# 2. รวม GET และ POST ไว้ด้วยกัน
+@app.route("/predict", methods=["GET", "POST"])
 def predict():
+    if request.method == "GET":
+        return "Please use POST method with JSON data (left, right, back)"
+    
     data = request.json
+    if not data:
+        return jsonify({"error": "No JSON data provided"}), 400
 
     left = data.get("left")
     right = data.get("right")
     back = data.get("back")
 
-    # เช็ค input
     if left is None or right is None or back is None:
-        return jsonify({"error": "Missing data"}), 400
+        return jsonify({"error": "Missing input fields (left, right, back)"}), 400
 
-    # predict
+    # 3. Predict และแปลงผลลัพธ์เป็นมาตรฐาน Python (เช่น int หรือ str)
     prediction = model.predict([[left, right, back]])
+    result = prediction[0]
 
     return jsonify({
-        "posture": prediction[0]
+        "posture": str(result) # แปลงเป็น str หรือ int เพื่อให้ jsonify ทำงานได้ 100%
     })
 
+# 4. ต้องอยู่ล่างสุดเสมอ
 if __name__ == "__main__":
-    app.run(debug=True)
-
-@app.route("/predict", methods=["GET"])
-def predict_get():
-    return "Use POST method with JSON data"
+    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

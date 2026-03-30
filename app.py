@@ -34,3 +34,7 @@ def predict():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+@app.route("/predict", methods=["GET"])
+def predict_get():
+    return "Use POST method with JSON data"

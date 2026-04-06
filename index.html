@@ -1,49 +1,564 @@
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
-  <title>Posture Checker</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Posture AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#0a0a0f;--surface:#111118;--card:#16161f;--border:#2a2a3a;
+      --accent:#00ffe0;--accent2:#7c3aed;--danger:#ff4757;--warn:#ffa502;
+      --good:#00ffe0;--text:#e8e8f0;--muted:#6b6b85;
+      --font-display:'Syne',sans-serif;--font-mono:'Space Mono',monospace;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--bg);color:var(--text);font-family:var(--font-display);min-height:100vh;overflow-x:hidden;}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,224,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,224,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+    .page{display:none;position:relative;z-index:1;}
+    .page.active{display:block;}
+
+    /* LOGIN */
+    #login-page{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;}
+    .login-box{width:100%;max-width:420px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2.5rem;position:relative;animation:fadeUp .6s ease both;}
+    .login-box::before{content:'';position:absolute;top:-1px;left:20%;right:20%;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);}
+    .login-logo{text-align:center;margin-bottom:2rem;}
+    .login-logo .icon-wrap{width:64px;height:64px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 1rem;box-shadow:0 0 30px rgba(0,255,224,0.2);}
+    .login-logo h1{font-size:1.6rem;font-weight:800;letter-spacing:-0.02em;}
+    .login-logo h1 span{color:var(--accent);}
+    .login-logo p{color:var(--muted);font-size:.8rem;font-family:var(--font-mono);margin-top:.3rem;}
+    .auth-tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:3px;margin-bottom:1.4rem;}
+    .auth-tab{flex:1;background:transparent;border:none;color:var(--muted);font-family:var(--font-display);font-size:.82rem;font-weight:600;padding:.5rem;border-radius:6px;cursor:pointer;transition:all .2s;}
+    .auth-tab.active{background:var(--card);color:var(--accent);border:1px solid var(--border);}
+    .field{margin-bottom:1.2rem;}
+    .field label{display:block;font-size:.75rem;font-family:var(--font-mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem;}
+    .field input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;color:var(--text);font-family:var(--font-mono);font-size:.9rem;outline:none;transition:border-color .2s,box-shadow .2s;}
+    .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,255,224,0.08);}
+    .btn-primary{width:100%;padding:.9rem;background:var(--accent);color:#0a0a0f;font-family:var(--font-display);font-weight:800;font-size:.95rem;border:none;border-radius:8px;cursor:pointer;letter-spacing:.05em;transition:opacity .2s,transform .15s;margin-top:.5rem;}
+    .btn-primary:hover{opacity:.9;transform:translateY(-1px);}
+    .btn-google{width:100%;display:flex;align-items:center;justify-content:center;gap:.7rem;padding:.85rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font-display);font-weight:600;font-size:.88rem;cursor:pointer;transition:all .2s;}
+    .btn-google:hover{border-color:#4285F4;background:rgba(66,133,244,0.06);}
+    .divider{display:flex;align-items:center;gap:.8rem;margin:1rem 0;color:var(--muted);font-size:.72rem;font-family:var(--font-mono);}
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+    .login-err{color:var(--danger);font-size:.78rem;font-family:var(--font-mono);margin-top:.8rem;text-align:center;min-height:1.2em;}
+
+    /* TOPBAR */
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:1.2rem 2rem;border-bottom:1px solid var(--border);background:rgba(10,10,15,.8);backdrop-filter:blur(12px);position:sticky;top:0;z-index:50;}
+    .topbar-brand{display:flex;align-items:center;gap:.7rem;font-size:1.1rem;font-weight:800;}
+    .topbar-brand .dot{width:10px;height:10px;background:var(--accent);border-radius:50%;box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite;}
+    .topbar-right{display:flex;align-items:center;gap:1rem;}
+    .status-badge{display:flex;align-items:center;gap:.4rem;font-family:var(--font-mono);font-size:.72rem;padding:.3rem .8rem;background:var(--card);border:1px solid var(--border);border-radius:20px;color:var(--muted);}
+    .status-badge.live{color:var(--accent);border-color:rgba(0,255,224,0.3);}
+    .status-badge.live .blink{animation:blink 1s infinite;}
+    .btn-logout{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--font-mono);font-size:.75rem;padding:.4rem .9rem;border-radius:6px;cursor:pointer;transition:all .2s;}
+    .btn-logout:hover{border-color:var(--danger);color:var(--danger);}
+
+    /* MAIN */
+    .main{padding:2rem;max-width:1100px;margin:0 auto;}
+    .posture-hero{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;}
+    @media(max-width:700px){.posture-hero{grid-template-columns:1fr;}}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;position:relative;overflow:hidden;}
+    .card-label{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:1rem;}
+    .posture-card{grid-column:1/-1;display:flex;align-items:center;gap:2rem;padding:2rem;}
+    .posture-icon{font-size:4rem;line-height:1;flex-shrink:0;transition:all .5s;}
+    .posture-info{flex:1;}
+    .posture-label{font-family:var(--font-mono);font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;}
+    .posture-result{font-size:2.2rem;font-weight:800;letter-spacing:-.02em;color:var(--accent);transition:color .5s;margin:.3rem 0;}
+    .posture-result.bad{color:var(--danger);}
+    .posture-result.warn{color:var(--warn);}
+    .posture-sub{font-size:.82rem;color:var(--muted);font-family:var(--font-mono);}
+    .last-update{font-family:var(--font-mono);font-size:.7rem;color:var(--muted);margin-top:.5rem;}
+
+    /* SENSOR BARS */
+    .sensors-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem;}
+    @media(max-width:600px){.sensors-grid{grid-template-columns:1fr;}}
+    .sensor-card{text-align:center;}
+    .sensor-name{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:1rem;}
+    .sensor-value{font-size:2.4rem;font-weight:800;font-family:var(--font-mono);line-height:1;margin-bottom:.8rem;}
+    .sensor-bar-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+    .sensor-bar-fill{height:100%;border-radius:3px;transition:width .4s cubic-bezier(.4,0,.2,1);}
+
+    /* MANNEQUIN CARD */
+    .mannequin-card{margin-bottom:1.5rem;}
+    .mannequin-wrap{display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap;}
+    .mq-canvas{display:block;border-radius:10px;background:var(--surface);cursor:default;touch-action:none;flex-shrink:0;}
+    .mq-controls{flex:1;min-width:180px;display:flex;flex-direction:column;gap:1rem;}
+    .mq-vals{display:flex;flex-direction:column;gap:.7rem;}
+    .mq-val-row{display:flex;align-items:center;gap:.6rem;font-family:var(--font-mono);font-size:.8rem;color:var(--muted);}
+    .mq-val-row b{color:var(--text);margin-left:auto;min-width:36px;text-align:right;}
+    .mq-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .mq-bar-track{height:5px;background:var(--border);border-radius:3px;overflow:hidden;flex:1;}
+    .mq-bar-fill{height:100%;border-radius:3px;transition:width .12s;}
+    .mq-hint{font-family:var(--font-mono);font-size:.72rem;color:var(--muted);line-height:2;padding:.8rem;background:var(--surface);border:1px solid var(--border);border-radius:8px;}
+    .mq-hint span{color:var(--accent);}
+    .btn-predict{background:var(--accent);color:#0a0a0f;font-family:var(--font-display);font-weight:800;font-size:.85rem;border:none;border-radius:8px;padding:.75rem 1.5rem;cursor:pointer;letter-spacing:.03em;transition:all .2s;}
+    .btn-predict:hover{opacity:.9;transform:translateY(-1px);}
+    .btn-predict:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+    .toggle-row{display:flex;align-items:center;gap:.8rem;}
+    .toggle-label{font-family:var(--font-mono);font-size:.75rem;color:var(--muted);}
+    .toggle{position:relative;width:42px;height:22px;cursor:pointer;}
+    .toggle input{opacity:0;width:0;height:0;}
+    .slider{position:absolute;inset:0;background:var(--border);border-radius:22px;transition:background .3s;}
+    .slider::before{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;background:var(--muted);border-radius:50%;transition:transform .3s,background .3s;}
+    .toggle input:checked+.slider{background:rgba(0,255,224,0.2);}
+    .toggle input:checked+.slider::before{transform:translateX(20px);background:var(--accent);box-shadow:0 0 6px var(--accent);}
+
+    /* LOG */
+    .log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+    .log-title{font-size:.9rem;font-weight:600;}
+    .log-count{font-family:var(--font-mono);font-size:.7rem;color:var(--muted);background:var(--surface);padding:.2rem .6rem;border-radius:20px;border:1px solid var(--border);}
+    .log-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:.78rem;}
+    .log-table th{text-align:left;color:var(--muted);font-weight:400;padding:.5rem .8rem;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.08em;font-size:.65rem;}
+    .log-table td{padding:.7rem .8rem;border-bottom:1px solid rgba(42,42,58,.5);}
+    .log-table tr:last-child td{border-bottom:none;}
+    .log-table tr{animation:fadeUp .3s ease both;}
+    .tag{display:inline-block;padding:.2rem .6rem;border-radius:4px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+    .tag-good{background:rgba(0,255,224,.1);color:var(--good);border:1px solid rgba(0,255,224,.2);}
+    .tag-bad{background:rgba(255,71,87,.1);color:var(--danger);border:1px solid rgba(255,71,87,.2);}
+    .tag-warn{background:rgba(255,165,2,.1);color:var(--warn);border:1px solid rgba(255,165,2,.2);}
+    .empty-log{text-align:center;color:var(--muted);font-family:var(--font-mono);font-size:.78rem;padding:2rem;}
+    .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,255,224,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+    .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:.9rem 1.2rem;font-family:var(--font-mono);font-size:.8rem;z-index:999;animation:fadeUp .3s ease;max-width:280px;}
+    .toast.err{border-left-color:var(--danger);}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+    @keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 8px var(--accent);}50%{opacity:.5;box-shadow:0 0 2px var(--accent);}}
+    @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+    @keyframes spin{to{transform:rotate(360deg);}}
+  </style>
 </head>
 <body>
 
-<h2>Posture AI Test</h2>
+<!-- LOGIN -->
+<div id="login-page" class="page active">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="icon-wrap">🪑</div>
+      <h1>Posture<span>AI</span></h1>
+      <p>// real-time posture monitoring system</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-signin" onclick="switchTab('signin')">Sign In</button>
+      <button class="auth-tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input id="login-email" type="email" placeholder="you@example.com" autocomplete="email"/>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="btn-primary" id="email-btn" onclick="doEmailAuth()">
+      <span id="email-btn-text">Sign In →</span>
+    </button>
+    <div class="divider"><span>or</span></div>
+    <button class="btn-google" onclick="doGoogle()">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+        <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      Continue with Google
+    </button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
 
-<label>Left:</label>
-<input id="left" type="number" step="0.01"><br><br>
+<!-- DASHBOARD -->
+<div id="dashboard-page" class="page">
+  <div class="topbar">
+    <div class="topbar-brand"><div class="dot"></div>PostureAI</div>
+    <div class="topbar-right">
+      <div class="status-badge live" id="live-badge"><span class="blink">●</span>&nbsp;<span id="live-label">LIVE</span></div>
+      <div class="status-badge" id="user-badge">user: —</div>
+      <button class="btn-logout" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
 
-<label>Right:</label>
-<input id="right" type="number" step="0.01"><br><br>
+  <div class="main">
 
-<label>Back:</label>
-<input id="back" type="number" step="0.01"><br><br>
+    <!-- posture result -->
+    <div class="posture-hero">
+      <div class="card posture-card">
+        <div class="posture-icon" id="posture-icon">🪑</div>
+        <div class="posture-info">
+          <div class="posture-label">Current Posture Status</div>
+          <div class="posture-result" id="posture-result">Waiting...</div>
+          <div class="posture-sub" id="posture-sub">ปรับท่านั่งบนหุ่นจำลองแล้วกด Predict</div>
+          <div class="last-update" id="last-update"></div>
+        </div>
+      </div>
+    </div>
 
-<button onclick="sendData()">Predict</button>
+    <!-- sensor bars -->
+    <div class="sensors-grid">
+      <div class="card sensor-card">
+        <div class="sensor-name">🦵 Left</div>
+        <div class="sensor-value" id="bar-left" style="color:#378ADD">—</div>
+        <div class="sensor-bar-track"><div class="sensor-bar-fill" id="fill-left" style="width:0%;background:#378ADD;box-shadow:0 0 8px #378ADD40"></div></div>
+      </div>
+      <div class="card sensor-card">
+        <div class="sensor-name">🦵 Right</div>
+        <div class="sensor-value" id="bar-right" style="color:#D85A30">—</div>
+        <div class="sensor-bar-track"><div class="sensor-bar-fill" id="fill-right" style="width:0%;background:#D85A30;box-shadow:0 0 8px #D85A3040"></div></div>
+      </div>
+      <div class="card sensor-card">
+        <div class="sensor-name">🔙 Back</div>
+        <div class="sensor-value" id="bar-back" style="color:#1D9E75">—</div>
+        <div class="sensor-bar-track"><div class="sensor-bar-fill" id="fill-back" style="width:0%;background:#1D9E75;box-shadow:0 0 8px #1D9E7540"></div></div>
+      </div>
+    </div>
 
-<h3 id="result"></h3>
+    <!-- mannequin simulator -->
+    <div class="card mannequin-card">
+      <div class="card-label">Posture Simulator — ลากหุ่นเพื่อจำลองท่านั่ง</div>
+      <div class="mannequin-wrap">
+        <canvas id="mq-cvs" class="mq-canvas" width="260" height="400"></canvas>
+        <div class="mq-controls">
+          <div class="mq-vals">
+            <div class="mq-val-row">
+              <div class="mq-dot" style="background:#378ADD"></div>Left
+              <div class="mq-bar-track"><div class="mq-bar-fill" id="mq-bl" style="width:50%;background:#378ADD"></div></div>
+              <b id="mq-vl">0.50</b>
+            </div>
+            <div class="mq-val-row">
+              <div class="mq-dot" style="background:#D85A30"></div>Right
+              <div class="mq-bar-track"><div class="mq-bar-fill" id="mq-br" style="width:50%;background:#D85A30"></div></div>
+              <b id="mq-vr">0.50</b>
+            </div>
+            <div class="mq-val-row">
+              <div class="mq-dot" style="background:#1D9E75"></div>Back
+              <div class="mq-bar-track"><div class="mq-bar-fill" id="mq-bb" style="width:15%;background:#1D9E75"></div></div>
+              <b id="mq-vb">0.15</b>
+            </div>
+          </div>
+          <div class="mq-hint">
+            ลาก <span>ลำตัว</span> → เอียงซ้าย/ขวา<br>
+            ลาก <span>บริเวณไหล่</span> → โน้มหน้า/หลัง
+          </div>
+          <button class="btn-predict" id="predict-btn" onclick="mannequinPredict()">Predict →</button>
+          <div class="toggle-row">
+            <label class="toggle">
+              <input type="checkbox" id="auto-toggle" onchange="toggleAuto()"/>
+              <span class="slider"></span>
+            </label>
+            <span class="toggle-label" id="auto-label">Auto-send: OFF</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-<script>
-function sendData() {
-  const left = parseFloat(document.getElementById("left").value);
-  const right = parseFloat(document.getElementById("right").value);
-  const back = parseFloat(document.getElementById("back").value);
+    <!-- session log -->
+    <div class="card">
+      <div class="log-header">
+        <div class="log-title">Session Log</div>
+        <div class="log-count" id="log-count">0 records</div>
+      </div>
+      <div id="log-body"><div class="empty-log">No predictions yet.</div></div>
+    </div>
 
-  fetch("http://127.0.0.1:5000/predict", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      left: left,
-      right: right,
-      back: back
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById("result").innerText =
-      "Posture: " + data.posture;
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+const app = initializeApp({
+  apiKey:"AIzaSyDADZ32DFaZcb3i-WuPg6ta_E5nV5xLquI",
+  authDomain:"posture-ai-project.firebaseapp.com",
+  projectId:"posture-ai-project",
+  storageBucket:"posture-ai-project.firebasestorage.app",
+  messagingSenderId:"223672169304",
+  appId:"1:223672169304:web:72e1e1d38663e4d44feb2d"
+});
+const db=getFirestore(app), auth=getAuth(app), gProvider=new GoogleAuthProvider();
+let autoInterval=null, recordCount=0, activeTab="signin";
+
+/* ── AUTH ── */
+window.switchTab=function(tab){
+  activeTab=tab;
+  document.getElementById("tab-signin").classList.toggle("active",tab==="signin");
+  document.getElementById("tab-signup").classList.toggle("active",tab==="signup");
+  document.getElementById("email-btn-text").textContent=tab==="signin"?"Sign In →":"Create Account →";
+  document.getElementById("login-err").textContent="";
+};
+window.doEmailAuth=async function(){
+  const email=document.getElementById("login-email").value.trim();
+  const pass=document.getElementById("login-pass").value;
+  const err=document.getElementById("login-err");
+  const btn=document.getElementById("email-btn");
+  if(!email||!pass){err.textContent="กรุณากรอก Email และ Password";return;}
+  btn.disabled=true;err.textContent="";
+  try{
+    if(activeTab==="signin") await signInWithEmailAndPassword(auth,email,pass);
+    else await createUserWithEmailAndPassword(auth,email,pass);
+  }catch(e){
+    const m={"auth/user-not-found":"❌ ไม่พบ Email นี้ในระบบ","auth/wrong-password":"❌ Password ไม่ถูกต้อง","auth/email-already-in-use":"❌ Email นี้ถูกใช้งานแล้ว","auth/weak-password":"❌ Password ต้องมีอย่างน้อย 6 ตัวอักษร","auth/invalid-email":"❌ รูปแบบ Email ไม่ถูกต้อง","auth/invalid-credential":"❌ Email หรือ Password ไม่ถูกต้อง"};
+    err.textContent=m[e.code]||"❌ "+e.message;
+  }finally{btn.disabled=false;}
+};
+window.doGoogle=async function(){
+  document.getElementById("login-err").textContent="";
+  try{await signInWithPopup(auth,gProvider);}
+  catch(e){if(e.code!=="auth/popup-closed-by-user") document.getElementById("login-err").textContent="❌ Google Sign-In ล้มเหลว: "+e.message;}
+};
+onAuthStateChanged(auth,user=>{
+  if(user){
+    document.getElementById("user-badge").textContent="user: "+(user.displayName||user.email.split("@")[0]);
+    document.getElementById("login-page").classList.remove("active");
+    document.getElementById("dashboard-page").classList.add("active");
+    setTimeout(mqInit,60);
+  }else{
+    document.getElementById("dashboard-page").classList.remove("active");
+    document.getElementById("login-page").classList.add("active");
+  }
+});
+window.doLogout=async function(){
+  clearInterval(autoInterval);autoInterval=null;
+  document.getElementById("auto-toggle").checked=false;
+  document.getElementById("auto-label").textContent="Auto-send: OFF";
+  document.getElementById("live-label").textContent="LIVE";
+  recordCount=0;
+  document.getElementById("log-count").textContent="0 records";
+  document.getElementById("log-body").innerHTML='<div class="empty-log">No predictions yet.</div>';
+  document.getElementById("posture-result").textContent="Waiting...";
+  document.getElementById("login-pass").value="";
+  await signOut(auth);
+};
+document.getElementById("login-pass").addEventListener("keydown",e=>{if(e.key==="Enter")window.doEmailAuth();});
+
+/* ── PREDICT ── */
+async function predict(left,right,back){
+  const btn=document.getElementById("predict-btn");
+  btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Predicting...';
+  try{
+    const res=await fetch("https://posture-ai-project.onrender.com/predict",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({left,right,back})});
+    if(!res.ok) throw new Error();
+    const data=await res.json();
+    const posture=data.posture||"Unknown";
+    updateDisplay(left,right,back,posture);
+    await addDoc(collection(db,"posture_logs"),{left,right,back,posture,user:auth.currentUser?.email||"anon",timestamp:serverTimestamp()});
+    addLogRow(left,right,back,posture);
+    showToast("✓ Saved: "+posture);
+  }catch{
+    const posture=demoPosture(left,right,back);
+    updateDisplay(left,right,back,posture);
+    addLogRow(left,right,back,posture+" (demo)");
+    showToast("⚠ API ไม่ตอบสนอง — demo mode",true);
+  }finally{btn.disabled=false;btn.textContent="Predict →";}
+}
+function demoPosture(l,r,b){
+  const d=Math.abs(l-r);
+  if(d<0.12&&b<0.3) return "Good Posture";
+  if(d>0.4||b>0.7) return "Bad Posture";
+  return "Slight Lean";
+}
+window.mannequinPredict=function(){
+  const s=getMqSensors();
+  predict(+s.l.toFixed(2),+s.r.toFixed(2),+s.b.toFixed(2));
+};
+window.toggleAuto=function(){
+  const on=document.getElementById("auto-toggle").checked;
+  if(on){
+    document.getElementById("auto-label").textContent="Auto-send: ON — ทุก 5 วิ";
+    document.getElementById("live-label").textContent="AUTO";
+    autoInterval=setInterval(()=>{const s=getMqSensors();predict(+s.l.toFixed(2),+s.r.toFixed(2),+s.b.toFixed(2));},5000);
+  }else{
+    document.getElementById("auto-label").textContent="Auto-send: OFF";
+    document.getElementById("live-label").textContent="LIVE";
+    clearInterval(autoInterval);autoInterval=null;
+  }
+};
+function updateDisplay(l,r,b,posture){
+  document.getElementById("bar-left").textContent=l.toFixed(2);
+  document.getElementById("bar-right").textContent=r.toFixed(2);
+  document.getElementById("bar-back").textContent=b.toFixed(2);
+  document.getElementById("fill-left").style.width=(l*100)+"%";
+  document.getElementById("fill-right").style.width=(r*100)+"%";
+  document.getElementById("fill-back").style.width=(b*100)+"%";
+  const el=document.getElementById("posture-result");
+  const icon=document.getElementById("posture-icon");
+  const sub=document.getElementById("posture-sub");
+  el.textContent=posture;el.className="posture-result";
+  const p=posture.toLowerCase();
+  if(p.includes("good")){el.classList.add("good");icon.textContent="🧘";sub.textContent="ท่านั่งดีมาก! รักษาไว้แบบนี้เลย";}
+  else if(p.includes("bad")||p.includes("poor")){el.classList.add("bad");icon.textContent="⚠️";sub.textContent="ท่านั่งไม่ดี — กรุณาปรับท่าทาง";}
+  else{el.classList.add("warn");icon.textContent="🪑";sub.textContent="ท่านั่งพอใช้ — ควรปรับเล็กน้อย";}
+  document.getElementById("last-update").textContent="Updated: "+new Date().toLocaleTimeString("th-TH");
+}
+function addLogRow(l,r,b,posture){
+  recordCount++;
+  document.getElementById("log-count").textContent=recordCount+" records";
+  const p=posture.toLowerCase();
+  const tc=p.includes("good")?"tag-good":p.includes("bad")||p.includes("poor")?"tag-bad":"tag-warn";
+  const tbody=document.getElementById("log-body");
+  if(recordCount===1) tbody.innerHTML=`<table class="log-table"><thead><tr><th>#</th><th>Time</th><th>Left</th><th>Right</th><th>Back</th><th>Result</th></tr></thead><tbody id="log-rows"></tbody></table>`;
+  document.getElementById("log-rows").insertAdjacentHTML("afterbegin",`<tr><td>${recordCount}</td><td>${new Date().toLocaleTimeString("th-TH")}</td><td>${l}</td><td>${r}</td><td>${b}</td><td><span class="tag ${tc}">${posture}</span></td></tr>`);
+}
+function showToast(msg,isErr=false){
+  const t=document.createElement("div");t.className="toast"+(isErr?" err":"");t.textContent=msg;
+  document.body.appendChild(t);setTimeout(()=>t.remove(),3000);
+}
+
+/* ── MANNEQUIN ENGINE ── */
+let mqCvs,mqCtx,mqLean=0,mqFwd=0,mqDrag=null,mqDSX,mqDSY,mqL0,mqF0;
+
+function getMqSensors(){
+  return{
+    l:Math.max(0,Math.min(1,.5+mqLean*.9+(mqFwd>0?mqFwd*.05:0))),
+    r:Math.max(0,Math.min(1,.5-mqLean*.9+(mqFwd>0?mqFwd*.05:0))),
+    b:Math.max(0,Math.min(1,.15+Math.abs(mqLean)*.35+mqFwd*.65))
+  };
+}
+window.getMqSensors=getMqSensors;
+
+function sCol(v){return v<.3?'#1D9E75':v<.65?'#EF9F27':'#E24B4A';}
+
+function cap(x1,y1,x2,y2,w,fill,stk){
+  const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy);if(!len)return;
+  const px=-dy/len*w/2,py=dx/len*w/2;
+  mqCtx.beginPath();
+  mqCtx.moveTo(x1+px,y1+py);mqCtx.lineTo(x2+px,y2+py);
+  mqCtx.arc(x2,y2,w/2,Math.atan2(py,px),Math.atan2(-py,-px),false);
+  mqCtx.lineTo(x1-px,y1-py);
+  mqCtx.arc(x1,y1,w/2,Math.atan2(-py,-px),Math.atan2(py,px),false);
+  mqCtx.closePath();mqCtx.fillStyle=fill;mqCtx.fill();
+  if(stk){mqCtx.strokeStyle=stk;mqCtx.lineWidth=.8;mqCtx.stroke();}
+}
+function rrect(x,y,w,h,r,fill,stk){
+  mqCtx.beginPath();
+  mqCtx.moveTo(x+r,y);mqCtx.lineTo(x+w-r,y);mqCtx.quadraticCurveTo(x+w,y,x+w,y+r);
+  mqCtx.lineTo(x+w,y+h-r);mqCtx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  mqCtx.lineTo(x+r,y+h);mqCtx.quadraticCurveTo(x,y+h,x,y+h-r);
+  mqCtx.lineTo(x,y+r);mqCtx.quadraticCurveTo(x,y,x+r,y);
+  mqCtx.closePath();mqCtx.fillStyle=fill;mqCtx.fill();
+  if(stk){mqCtx.strokeStyle=stk;mqCtx.lineWidth=.8;mqCtx.stroke();}
+}
+function circ(x,y,r,fill,stk){
+  mqCtx.beginPath();mqCtx.arc(x,y,r,0,Math.PI*2);
+  mqCtx.fillStyle=fill;mqCtx.fill();
+  if(stk){mqCtx.strokeStyle=stk;mqCtx.lineWidth=.8;mqCtx.stroke();}
+}
+
+function mqDraw(){
+  if(!mqCvs)return;
+  const W=260,H=400,cx=W/2;
+  mqCtx.clearRect(0,0,W,H);
+  const seatY=278,tilt=mqLean*.3;
+
+  const hipX=cx+mqLean*18,   hipY=seatY-6;
+  const waistX=cx+mqLean*26, waistY=hipY-38+mqFwd*10;
+  const chestX=cx+mqLean*32, chestY=waistY-44+mqFwd*7;
+  const neckBX=cx+mqLean*36, neckBY=chestY-16+mqFwd*4;
+  const headX=cx+mqLean*40+mqFwd*6, headY=neckBY-30;
+
+  /* chair */
+  mqCtx.strokeStyle='#3a3a4a';mqCtx.lineWidth=5;mqCtx.lineCap='round';
+  [[cx-32,seatY+8,cx-36,seatY+76],[cx+32,seatY+8,cx+36,seatY+76]].forEach(([x1,y1,x2,y2])=>{mqCtx.beginPath();mqCtx.moveTo(x1,y1);mqCtx.lineTo(x2,y2);mqCtx.stroke();});
+  mqCtx.beginPath();mqCtx.moveTo(cx-36,seatY+60);mqCtx.lineTo(cx+36,seatY+60);mqCtx.lineWidth=4;mqCtx.stroke();
+  rrect(cx-34,seatY-118,68,108,7,'#1e1e2a','#3a3a4a');
+  rrect(cx-42,seatY-5,84,16,5,'#1e1e2a','#3a3a4a');
+
+  /* body legs */
+  [-1,1].forEach(sx=>{
+    cap(hipX+sx*9,hipY+3,hipX+sx*29+mqLean*4,hipY+5,17,'#2e3f5a','#253352');
+    circ(hipX+sx*27+mqLean*4,hipY+5,8,'#3a506e','#253352');
+    cap(hipX+sx*27+mqLean*4,hipY+9,hipX+sx*28+mqLean*4,hipY+70,10,'#2e3f5a','#253352');
+    rrect(hipX+sx*20+mqLean*4-(sx<0?24:0),hipY+70,24,10,5,'#1a1a22','#111');
   });
+
+  /* torso */
+  mqCtx.save();mqCtx.translate(waistX,waistY-18);mqCtx.rotate(tilt);
+  rrect(-17,12,34,20,5,'#2e3f5a','#253352');
+  rrect(-22,-44,44,58,9,'#3a5a8a','#2a4a7a');
+  rrect(-8,-44,16,12,4,'#4a6a9a','#2a4a7a');
+  mqCtx.restore();
+
+  /* arms */
+  [-1,1].forEach(sx=>{
+    const shX=chestX+sx*23,shY=chestY+4;
+    const elX=shX+sx*12+sx*mqLean*3,elY=shY+42;
+    const haX=elX+sx*5,haY=elY+34;
+    circ(shX,shY,8,'#4a6a9a','#2a4a7a');
+    cap(shX,shY+4,elX,elY-4,13,'#3a5a8a','#2a4a7a');
+    circ(elX,elY,7,'#4a6a9a','#2a4a7a');
+    cap(elX,elY+4,haX,haY-4,10,'#3a5a8a','#2a4a7a');
+    mqCtx.beginPath();mqCtx.ellipse(haX,haY+4,6,9,sx*.2,0,Math.PI*2);
+    mqCtx.fillStyle='#3a5a8a';mqCtx.fill();mqCtx.strokeStyle='#2a4a7a';mqCtx.lineWidth=.8;mqCtx.stroke();
+  });
+
+  /* neck + head */
+  cap(neckBX,neckBY+8,headX,headY+20,11,'#4a6a9a','#2a4a7a');
+  mqCtx.save();mqCtx.translate(headX,headY);mqCtx.rotate(tilt*.45+mqFwd*.18);
+  mqCtx.beginPath();mqCtx.ellipse(0,0,18,22,0,0,Math.PI*2);
+  mqCtx.fillStyle='#3a5a8a';mqCtx.fill();mqCtx.strokeStyle='#2a4a7a';mqCtx.lineWidth=.8;mqCtx.stroke();
+  mqCtx.strokeStyle='#4a6a9a';mqCtx.lineWidth=1;mqCtx.lineCap='round';
+  mqCtx.beginPath();mqCtx.moveTo(-6,-8);mqCtx.lineTo(-4,10);mqCtx.stroke();
+  mqCtx.beginPath();mqCtx.moveTo(6,-8);mqCtx.lineTo(4,10);mqCtx.stroke();
+  mqCtx.restore();
+
+  /* sensor dots */
+  const s=getMqSensors();
+  [{x:cx-44+mqLean*6,y:seatY+1,v:s.l},{x:cx+44+mqLean*6,y:seatY+1,v:s.r},{x:cx-34,y:seatY-72,v:s.b}].forEach(d=>{
+    mqCtx.beginPath();mqCtx.arc(d.x,d.y,11,0,Math.PI*2);mqCtx.fillStyle=sCol(d.v)+'28';mqCtx.fill();
+    circ(d.x,d.y,7,sCol(d.v),'rgba(255,255,255,0.25)');
+  });
+
+  /* update mini bars */
+  document.getElementById('mq-vl').textContent=s.l.toFixed(2);
+  document.getElementById('mq-vr').textContent=s.r.toFixed(2);
+  document.getElementById('mq-vb').textContent=s.b.toFixed(2);
+  document.getElementById('mq-bl').style.width=(s.l*100)+'%';
+  document.getElementById('mq-br').style.width=(s.r*100)+'%';
+  document.getElementById('mq-bb').style.width=(s.b*100)+'%';
+}
+
+function mqHit(mx,my){
+  const cx=130,seatY=278;
+  const waistX=cx+mqLean*26,waistY=seatY-44+mqFwd*10,chestY=waistY-44+mqFwd*7;
+  if(mx>waistX-30&&mx<waistX+30&&my>waistY-52&&my<waistY+28)return'lean';
+  if(my>chestY-12&&my<chestY+30)return'fwd';
+  return null;
+}
+
+function mqInit(){
+  mqCvs=document.getElementById('mq-cvs');if(!mqCvs)return;
+  mqCtx=mqCvs.getContext('2d');
+
+  mqCvs.addEventListener('mousedown',e=>{
+    const r=mqCvs.getBoundingClientRect();
+    const z=mqHit(e.clientX-r.left,e.clientY-r.top);
+    if(z){mqDrag=z;mqDSX=e.clientX-r.left;mqDSY=e.clientY-r.top;mqL0=mqLean;mqF0=mqFwd;}
+  });
+  mqCvs.addEventListener('mousemove',e=>{
+    const r=mqCvs.getBoundingClientRect();
+    const mx=e.clientX-r.left,my=e.clientY-r.top;
+    if(!mqDrag){mqCvs.style.cursor=mqHit(mx,my)?'grab':'default';return;}
+    mqCvs.style.cursor='grabbing';
+    if(mqDrag==='lean')mqLean=Math.max(-1,Math.min(1,mqL0+(mx-mqDSX)/65));
+    if(mqDrag==='fwd') mqFwd=Math.max(-.4,Math.min(1,mqF0+(my-mqDSY)/65));
+    mqDraw();
+  });
+  mqCvs.addEventListener('mouseup',()=>{mqDrag=null;mqCvs.style.cursor='default';});
+  mqCvs.addEventListener('mouseleave',()=>{mqDrag=null;});
+  mqCvs.addEventListener('touchstart',e=>{
+    e.preventDefault();const t=e.touches[0],r=mqCvs.getBoundingClientRect();
+    const z=mqHit(t.clientX-r.left,t.clientY-r.top);
+    if(z){mqDrag=z;mqDSX=t.clientX-r.left;mqDSY=t.clientY-r.top;mqL0=mqLean;mqF0=mqFwd;}
+  },{passive:false});
+  mqCvs.addEventListener('touchmove',e=>{
+    e.preventDefault();if(!mqDrag)return;
+    const t=e.touches[0],r=mqCvs.getBoundingClientRect();
+    if(mqDrag==='lean')mqLean=Math.max(-1,Math.min(1,mqL0+(t.clientX-r.left-mqDSX)/65));
+    if(mqDrag==='fwd') mqFwd=Math.max(-.4,Math.min(1,mqF0+(t.clientY-r.top-mqDSY)/65));
+    mqDraw();
+  },{passive:false});
+  mqCvs.addEventListener('touchend',()=>{mqDrag=null;});
+  mqDraw();
 }
 </script>
-
 </body>
 </html>
